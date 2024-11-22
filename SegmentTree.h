@@ -29,6 +29,12 @@
  * @param r2 Index of the right side of the 2nd segment
  */
 #define SEG_CONTAINS(l1, r1, l2, r2) ((l2) >= (l1) && (r2) <= (r1))
+/**
+ * Returns the index of the midpoint of the segment
+ * @param l Index of the left side of the segment
+ * @param r Index of the right side of the segment
+ */
+#define SEG_MIDPOINT(l, r) ((l) + ((r) - (l)) / 2)
 
 using namespace std;
 

@@ -18,7 +18,7 @@ void SegmentTree::build(const std::vector<int> &data, int i, int lo, int hi) {
         tree[i].sum = data[lo];
         return;
     }
-    int mid = lo + (hi - lo) / 2;
+    int mid = SEG_MIDPOINT(lo, hi);
     build(data, L_INDEX(i), lo, mid);
     build(data, R_INDEX(i), mid + 1, hi);
     tree[i].sum = tree[L_INDEX(i)].sum + tree[R_INDEX(i)].sum;
@@ -32,7 +32,7 @@ void SegmentTree::range_update_add(int l, int r, int val, int i, int lo, int hi)
         propagate_update_add(i, lo, hi);
         return;
     }
-    int mid = lo + (hi - lo) / 2;
+    int mid = SEG_MIDPOINT(lo, hi);
     range_update_add(l, r, val, L_INDEX(i), lo, mid);
     range_update_add(l, r, val, R_INDEX(i), mid + 1, hi);
     tree[i].sum = tree[L_INDEX(i)].sum + tree[R_INDEX(i)].sum;
@@ -50,7 +50,7 @@ int SegmentTree::range_query(int l, int r, int i, int lo, int hi) {
     propagate_update_add(i, lo, hi);
     if (SEG_DISJOINT(l, r, lo, hi)) return 0;
     if (SEG_CONTAINS(l, r, lo, hi)) return tree[i].sum;
-    int mid = lo + (hi - lo) / 2;
+    int mid = SEG_MIDPOINT(lo, hi);
     return range_query(l, r, L_INDEX(i), lo, mid) + range_query(l, r, R_INDEX(i), mid + 1, hi);
 }
 
