@@ -50,8 +50,8 @@ int CoarseSegmentTree::range_query(int l, int r) {
 }
 
 int CoarseSegmentTree::range_query(int l, int r, int i, int lo, int hi) {
-    lazy_propagate(i, lo, hi);
     if (SEG_DISJOINT(l, r, lo, hi)) return base;
+    lazy_propagate(i, lo, hi);
     if (SEG_CONTAINS(l, r, lo, hi)) return tree[i].value;
     int mid = SEG_MIDPOINT(lo, hi);
     return func(range_query(l, r, L_INDEX(i), lo, mid), range_query(l, r, R_INDEX(i), mid + 1, hi));
@@ -64,8 +64,8 @@ void CoarseSegmentTree::range_update(int l, int r, int val) {
 }
 
 void CoarseSegmentTree::range_update(int l, int r, int val, int i, int lo, int hi) {
-    lazy_propagate(i, lo, hi);
     if (SEG_DISJOINT(l, r, lo, hi)) return;
+    lazy_propagate(i, lo, hi);
     if (SEG_CONTAINS(l, r, lo, hi)) {
         tree[i].update = func(tree[i].update, val);
         return;

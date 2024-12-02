@@ -42,7 +42,7 @@ int main() {
         std::cout << "Node " << i << "\t Value: " << t.tree[i].value << "\t Update: " << t.tree[i].update << std::endl;
     }
 
-    r = t.range_query(2, 3);
+    r = t.range_query(2, 2);
 
     cout << r << endl;
 
