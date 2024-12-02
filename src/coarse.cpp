@@ -35,11 +35,9 @@ void CoarseSegmentTree::build(const std::vector<int> &data, int i, int lo, int h
         return;
     }
     int mid = SEG_MIDPOINT(lo, hi);
-    int left = L_INDEX(i);
-    int right = R_INDEX(i);
-    build(data, left, lo, mid);
-    build(data, right, mid + 1, hi);
-    tree[i].value = tree[left].value + tree[right].value;
+    build(data, L_INDEX(i), lo, mid);
+    build(data, R_INDEX(i), mid + 1, hi);
+    tree[i].value = func(tree[L_INDEX(i)].value, tree[R_INDEX(i)].value);
 }
 
 int CoarseSegmentTree::range_query(int l, int r) {
