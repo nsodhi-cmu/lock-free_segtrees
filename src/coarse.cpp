@@ -1,9 +1,14 @@
 #include "coarse.h"
 
-#include <bit>
-
 CoarseSegmentTree::CoarseSegmentTree(int size, int base, int (*func)(int, int), int (*batch_func)(int, int, int)) {
-    this->size = std::bit_ceil(size);
+    size--;
+    size |= size >> 1;
+    size |= size >> 2;
+    size |= size >> 4;
+    size |= size >> 8;
+    size |= size >> 16;
+    size++;
+    this->size = size;
     this->tree = new Node[2 * this->size]();
     this->base = base;
     this->func = func;
@@ -22,7 +27,7 @@ void CoarseSegmentTree::build(const std::vector<int> &data) {
 
 void CoarseSegmentTree::build(const std::vector<int> &data, int i, int lo, int hi) {
     if (lo == hi) {
-        if (lo < data.size()) {
+        if ((size_t)lo < data.size()) {
             tree[i].value = data[lo];
         } else {
             tree[i].value = base;
@@ -63,13 +68,13 @@ void CoarseSegmentTree::range_update(int l, int r, int val, int i, int lo, int h
     if (SEG_DISJOINT(l, r, lo, hi)) return;
     if (SEG_CONTAINS(l, r, lo, hi)) {
         tree[i].update = func(tree[i].update, val);
-        lazy_propagate(i, lo, hi);
         return;
     }
+    int intersection = std::min(r, hi) - std::max(l, lo) + 1;
+    tree[i].value = batch_func(tree[i].value, intersection, val);
     int mid = SEG_MIDPOINT(lo, hi);
     range_update(l, r, val, L_INDEX(i), lo, mid);
     range_update(l, r, val, R_INDEX(i), mid + 1, hi);
-    tree[i].value = tree[L_INDEX(i)].value + tree[R_INDEX(i)].value;
 }
 
 void CoarseSegmentTree::lazy_propagate(int i, int lo, int hi) {

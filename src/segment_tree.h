@@ -36,8 +36,7 @@
  */
 #define SEG_MIDPOINT(l, r) ((l) + ((r) - (l)) / 2)
 
-// Abstract Class 
-// Addition with base of 0
+// Abstract Class
 class SegmentTree {
     protected:
         int base;
@@ -49,7 +48,5 @@ class SegmentTree {
         virtual int range_query(int lower, int upper) = 0;
         virtual void range_update(int lower, int upper, int value) = 0;
 };
-
-inline SegmentTree::~SegmentTree() {}
 
 #endif

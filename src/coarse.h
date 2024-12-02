@@ -12,9 +12,9 @@ class CoarseSegmentTree : public SegmentTree {
         int update;
     };
     std::mutex mux;
-    Node *tree;
     int size;
-
+    public: Node *tree;
+    
     public:
         explicit CoarseSegmentTree(int size, int base, int (*func)(int, int), int (*batch_func)(int, int, int));
         ~CoarseSegmentTree();

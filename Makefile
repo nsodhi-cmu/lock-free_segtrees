@@ -1,25 +1,22 @@
 CXX = g++
-CXXFLAGS = -std=c++26 -O3 -pedantic -Wall -Wextra -Wshadow -Wunused-variable -Wconversion -Wformat -Wno-unknown-pragmas -fopenmp -pthread
+CXXFLAGS = -std=c++23 -O3 -pedantic -Wall -Wextra -Wunused-variable -Wformat -Wno-unknown-pragmas -fopenmp -pthread
 
 SRC_DIR = src
 INCLUDE_DIR = $(SRC_DIR)
 
-COARSE_SRC = $(SRC_DIR)/coarse.cpp
-FINE_SRC = $(SRC_DIR)/fine.cpp
-LOCKFREE_SRC = $(SRC_DIR)/lock-free.cpp
+SRCS = $(wildcard $(SRC_DIR)/*.cpp)
 MAIN_SRC = main.cpp
 
-HEADERS = $(SRC_DIR)/segment_tree.h
-TARGETS = coarse fine lock-free
+HEADERS = $(wildcard $(SRC_DIR)/*.h)
 
-coarse: $(COARSE_SRC) $(MAIN_SRC) $(HEADERS)
-	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -o $@ $(COARSE_SRC) $(MAIN_SRC)
+TARGET = segtree_main
 
-fine: $(FINE_SRC) $(MAIN_SRC) $(HEADERS)
-	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -o $@ $(FINE_SRC) $(MAIN_SRC)
+all: $(TARGET)
 
-lock-free: $(LOCKFREE_SRC) $(MAIN_SRC) $(HEADERS)
-	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -o $@ $(LOCKFREE_SRC) $(MAIN_SRC)
+$(TARGET): $(SRCS) $(MAIN_SRC) $(HEADERS)
+	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -o $@ $(SRCS) $(MAIN_SRC)
 
 clean:
-	rm -f $(TARGETS)
+	rm -f $(TARGET)
+
+.PHONY: all clean
