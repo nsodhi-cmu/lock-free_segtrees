@@ -1,5 +1,8 @@
 #include "fine.h"
 
+#include <queue>
+#include <tuple>
+
 FineSegmentTree::FineSegmentTree(int size, int base, int (*func)(int, int), int (*batch_func)(int, int, int)) {
     size--;
     size |= size >> 1;
@@ -39,45 +42,63 @@ void FineSegmentTree::build(const std::vector<int> &data, int i, int lo, int hi)
 }
 
 int FineSegmentTree::range_query(int l, int r) {
+    std::queue<std::tuple<int, int, int>> q;
+    int result = base;
     tree[1].mux.lock();
-    return range_query(l, r, 1, 0, size - 1);
-}
-
-int FineSegmentTree::range_query(int l, int r, int i, int lo, int hi) {
-    if (SEG_DISJOINT(l, r, lo, hi)) {
+    q.push({1, 0, size - 1});
+    while (!q.empty()) {
+        std::tuple<int, int, int> curr = q.front();
+        q.pop();
+        int i = std::get<0>(curr);
+        int lo = std::get<1>(curr);
+        int hi = std::get<2>(curr);
+        int size = hi - lo + 1;
+        if (SEG_CONTAINS(l, r, lo, hi)) {
+            if (size > 1) {
+                int v = batch_func(tree[i].value, size, tree[i].update);
+                result = func(result, v);
+            } else {
+                tree[i].value = func(tree[i].value, tree[i].update);
+                result = func(result, tree[i].value);
+            }
+        } else if (!(SEG_DISJOINT(l, r, lo, hi))){
+            tree[i].value = batch_func(tree[i].value, size, tree[i].update);
+            tree[L_INDEX(i)].mux.lock();
+            tree[R_INDEX(i)].mux.lock();
+            tree[L_INDEX(i)].update = func(tree[L_INDEX(i)].update, tree[i].update);
+            tree[R_INDEX(i)].update = func(tree[R_INDEX(i)].update, tree[i].update);
+            tree[i].update = base;
+            int mid = SEG_MIDPOINT(lo, hi);
+            q.push({L_INDEX(i), lo, mid});
+            q.push({R_INDEX(i), mid + 1, hi});
+        }
         tree[i].mux.unlock();
-        return base;
     }
-    lazy_propagate(i, lo, hi);
-    if (SEG_CONTAINS(l, r, lo, hi)) {
-        int v = tree[i].value;
-        tree[i].mux.unlock();
-        return v;
-    }
-    int mid = SEG_MIDPOINT(lo, hi);
-    int left = L_INDEX(i);
-    int right = R_INDEX(i);
-    tree[left].mux.lock();
-    tree[right].mux.lock();
-    tree[i].mux.unlock();
-    int lq = range_query(l, r, L_INDEX(i), lo, mid);
-    int rq = range_query(l, r, R_INDEX(i), mid + 1, hi);
-    return func(lq, rq);
+    return result;
 }
 
 void FineSegmentTree::range_update(int l, int r, int val) {
-}
-
-void FineSegmentTree::range_update(int l, int r, int val, int i, int lo, int hi) {
-}
-
-void FineSegmentTree::lazy_propagate(int i, int lo, int hi) {
-    if (tree[i].update == base) return;
-    int size = hi - lo + 1;
-    tree[i].value = batch_func(tree[i].value, size, tree[i].update);
-    if (size > 1) {
-        tree[L_INDEX(i)].update = func(tree[L_INDEX(i)].update, tree[i].update);
-        tree[R_INDEX(i)].update = func(tree[R_INDEX(i)].update, tree[i].update);
+    std::queue<std::tuple<int, int, int>> q;
+    tree[1].mux.lock();
+    q.push({1, 0, size - 1});
+    while (!q.empty()) {
+        std::tuple<int, int, int> curr = q.front();
+        q.pop();
+        int i = std::get<0>(curr);
+        int lo = std::get<1>(curr);
+        int hi = std::get<2>(curr);
+        int size = hi - lo + 1;
+        if (SEG_CONTAINS(l, r, lo, hi)) {
+            tree[i].update = func(tree[i].update, val);
+        } else if (!(SEG_DISJOINT(l, r, lo, hi))){
+            int intersection = std::min(r, hi) - std::max(l, lo) + 1;
+            tree[i].value = batch_func(tree[i].value, intersection, val);
+            tree[L_INDEX(i)].mux.lock();
+            tree[R_INDEX(i)].mux.lock();
+            int mid = SEG_MIDPOINT(lo, hi);
+            q.push({L_INDEX(i), lo, mid});
+            q.push({R_INDEX(i), mid + 1, hi});
+        }
+        tree[i].mux.unlock();
     }
-    tree[i].update = base;
 }

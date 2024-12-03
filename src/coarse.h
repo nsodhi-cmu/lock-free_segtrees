@@ -26,7 +26,6 @@ class CoarseSegmentTree : public SegmentTree {
         void build(const std::vector<int> &data, int i, int lo, int hi);
         int range_query(int l, int r, int i, int lo, int hi);
         void range_update(int l, int r, int val, int i, int lo, int hi);
-        void lazy_propagate(int i, int lo, int hi);
 };
 
 #endif
