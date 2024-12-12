@@ -30,7 +30,7 @@ int main() {
 
     CoarseSegmentTree c = CoarseSegmentTree(data.size(), base, add_ptr, batch_add_ptr);
     FineSegmentTree f = FineSegmentTree(data.size(), base, add_ptr, batch_add_ptr);
-    LFSegmentTree l = LFSegmentTree(data.size(), base, add_ptr, batch_add_ptr, 1);
+    LFSegmentTree l = LFSegmentTree(data.size(), base, add_ptr, batch_add_ptr, 2);
 
     c.build(data);
     f.build(data);

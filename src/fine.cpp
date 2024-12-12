@@ -50,6 +50,7 @@ int FineSegmentTree::range_query(int l, int r) {
             } else {
                 tree[i].value = func(tree[i].value, tree[i].update);
                 result = func(result, tree[i].value);
+                tree[i].update = base;
             }
         } else if (!(SEG_DISJOINT(l, r, lo, hi))){
             tree[i].value = batch_func(tree[i].value, size, tree[i].update);
