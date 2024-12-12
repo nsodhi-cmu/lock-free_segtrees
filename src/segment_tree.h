@@ -35,6 +35,18 @@
  * @param r Index of the right side of the segment
  */
 #define SEG_MIDPOINT(l, r) ((l) + ((r) - (l)) / 2)
+/**
+ * Rounds up to the next power of two
+ * @param size Value to round up
+ */
+#define NEXT_POW_TWO(size) \
+    (--(size), \
+    (size) |= (size) >> 1, \
+    (size) |= (size) >> 2, \
+    (size) |= (size) >> 4, \
+    (size) |= (size) >> 8, \
+    (size) |= (size) >> 16, \
+    ++(size))
 
 // Abstract Class
 class SegmentTree {
@@ -47,6 +59,7 @@ class SegmentTree {
         virtual void build(const std::vector<int> &data) = 0;
         virtual int range_query(int lower, int upper) = 0;
         virtual void range_update(int lower, int upper, int value) = 0;
+        virtual void print() = 0;
 };
 
 #endif
