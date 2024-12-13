@@ -79,9 +79,10 @@ void* workload(void* arg) {
 int main(int argc, char *argv[]) {
     string input_filename;
     char tree_type;
+    int num_threads;
 
     int opt;
-    while ((opt = getopt(argc, argv, "f:t:")) != -1) {
+    while ((opt = getopt(argc, argv, "f:t:n:")) != -1) {
         switch (opt) {
             case 'f':
                 input_filename = optarg;
@@ -89,8 +90,11 @@ int main(int argc, char *argv[]) {
             case 't':
                 tree_type = *optarg;
                 break;
+            case 'n':
+                num_threads = atoi(optarg);
+                break;
             default:
-                cerr << "Usage: " << argv[0] << " -f input_filename" << endl;
+                cerr << "Usage: " << argv[0] << " -f input_filename -t tree_type [-n num_threads]" << endl;
                 return -1;
         }
     }
@@ -105,10 +109,10 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    int num_threads, num_operations, size, seed;
+    int _num_threads, num_operations, size, seed;
     char function_type;
 
-    input_file >> num_threads >> num_operations >> size >> seed;
+    input_file >> _num_threads >> num_operations >> size >> seed;
     input_file >> function_type;
 
     int base;
