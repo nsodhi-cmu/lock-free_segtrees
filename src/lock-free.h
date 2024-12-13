@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <atomic>
+#include <exception>
 
 #include "segment_tree.h"
 #include "concurrent_stack.h"
@@ -18,6 +19,10 @@ class LFSegmentTree : public SegmentTree {
 
         bool operator==(const Head& other) const {
             return index == other.index && ticket == other.ticket;
+        }
+
+        bool operator!=(const Head& other) const {
+            return !(*this == other);
         }
     };
 
@@ -51,9 +56,13 @@ class LFSegmentTree : public SegmentTree {
         void delete_node(Node* curr);
         void build(const std::vector<int> &data, Node *curr, int idx, int len);
         int range_query(int lower, int upper, Node *curr, int lo, int hi);
-        Node *range_update(int l, int r, int val, Node *curr, Node *old, int lo, int hi, std::vector<Node*> &traversal, int &vidx, Head exp);
+        Node *range_update(int l, int r, int val, Node *curr, Node *old, int lo, int hi, std::vector<Node*> &traversal, int &vidx, Head &expected, bool &stop);
         Node *swap_pointers(int l, int r, Node *old, int lo, int hi, std::vector<Node*> &traversal, int &vidx);
         void print(Node *curr, const std::string &pref, bool last);
+};
+
+class StaleHeadException : public std::exception {
+
 };
 
 #endif
