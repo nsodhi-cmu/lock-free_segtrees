@@ -1,3 +1,4 @@
 .*
 !.gitignore
 cmake-build-debug/
+segtree_main
