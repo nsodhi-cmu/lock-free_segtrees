@@ -106,7 +106,7 @@ int LFSegmentTree::range_query(int l, int r, Node *curr, int lo, int hi) {
 
 void LFSegmentTree::range_update(int l, int r, int val) {
     std::vector<Node*> traversal;
-    int vidx = -1;
+    int vidx = 0;
     auto prevHead = head.load();
     auto nextTreeIdx = freeList.pop();
     refcount[nextTreeIdx].store(1);
@@ -115,12 +115,25 @@ void LFSegmentTree::range_update(int l, int r, int val) {
         Head nextHead = Head(nextTreeIdx, prevHead.ticket + 1);
         prevNode = shadows[prevHead.index];
         nextNode = shadows[nextTreeIdx];
-		range_update(l, r, val, nextNode, prevNode, 0, size - 1, traversal, vidx);
+		/*if (range_update(l, r, val, nextNode, prevNode, 0, size - 1, traversal, vidx, prevHead) == (Node*)(-1)) {
+            //std::cout << "-1" << std::endl;
+            //prevHead = head.load();
+            //continue;
+        }*/
+        range_update(l, r, val, nextNode, prevNode, 0, size - 1, traversal, vidx, prevHead);
         vidx = 0;
         if (head.compare_exchange_weak(prevHead, nextHead)) {
             break;
         }
     }
+    /*
+    std::cout << "Vector{";
+    for (auto elem : traversal) {
+        if (elem == (Node*)(-1)) std::cout << "SCREAM" << std::endl;
+        std::cout << elem << " ";
+    }
+    std::cout << "}" << std::endl;
+    */
     swap_pointers(l, r, prevNode, 0, size - 1, traversal, vidx);
     refcount[prevHead.index].fetch_add(-1);
     int expected = 0;
@@ -129,27 +142,45 @@ void LFSegmentTree::range_update(int l, int r, int val) {
     }
 }
 
-LFSegmentTree::Node *LFSegmentTree::range_update(int l, int r, int val, Node *curr, Node *prev, int lo, int hi, std::vector<Node*> &traversal, int &vidx) {
+LFSegmentTree::Node *LFSegmentTree::range_update(int l, int r, int val, Node *curr, Node *prev, int lo, int hi, std::vector<Node*> &traversal, int &vidx, Head exp) {
+    if (!(exp == head.load())) {
+        return (Node*)(-1);
+    }
     if (SEG_DISJOINT(l, r, lo, hi)) {
-        if (vidx == -1) {
+        //std::cout << "vidx: " << vidx << std::endl;
+        //std::cout << "trav: " << traversal.size() << std::endl;
+        if (vidx >= traversal.size()) {
             traversal.push_back(curr);
         } else {
-            traversal[vidx++] = curr;
+            traversal[vidx] = curr;
         }
+        vidx++;
         return prev;
     }
     curr->value = prev->value;
     curr->update = prev->update;
     if (SEG_CONTAINS(l, r, lo, hi)) {
         curr->update = func(curr->update, val);
-        curr->swap_left = range_update(l, r, val, curr->swap_left, prev->left, -1, -1, traversal, vidx); // disjoint
-        curr->swap_right = range_update(l, r, val, curr->swap_right, prev->right, -1, -1, traversal, vidx); // disjoint
+        curr->swap_left = range_update(l, r, val, curr->swap_left, prev->left, -1, -1, traversal, vidx, exp); // disjoint
+        if (curr->swap_left == (Node*)(-1)) {
+            return (Node*)(-1);
+        }
+        curr->swap_right = range_update(l, r, val, curr->swap_right, prev->right, -1, -1, traversal, vidx, exp); // disjoint
+        if (curr->swap_right == (Node*)(-1)) {
+            return (Node*)(-1);
+        }
     } else {
         int intersection = std::min(r, hi) - std::max(l, lo) + 1;
         curr->value = batch_func(curr->value, intersection, val);
         int mid = SEG_MIDPOINT(lo, hi);
-        curr->swap_left = range_update(l, r, val, curr->swap_left, prev->left, lo, mid, traversal, vidx);
-        curr->swap_right = range_update(l, r, val, curr->swap_right, prev->right, mid + 1, hi, traversal, vidx);
+        curr->swap_left = range_update(l, r, val, curr->swap_left, prev->left, lo, mid, traversal, vidx, exp);
+        if (curr->swap_left == (Node*)(-1)) {
+            return (Node*)(-1);
+        }
+        curr->swap_right = range_update(l, r, val, curr->swap_right, prev->right, mid + 1, hi, traversal, vidx, exp);
+        if (curr->swap_right == (Node*)(-1)) {
+            return (Node*)(-1);
+        }
     }
     curr->left = curr->swap_left;
     curr->right = curr->swap_right;
