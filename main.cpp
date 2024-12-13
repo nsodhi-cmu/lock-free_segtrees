@@ -1,12 +1,19 @@
 #include <vector>
 #include <iostream>
 #include <random>
+#include <fstream>
+#include <chrono>
+#include <iomanip>
+#include <pthread.h>
 
+#include "segment_tree.h"
 #include "coarse.h"
 #include "fine.h"
 #include "lock-free.h"
 
 using namespace std;
+
+#define MAX_VAL 100
 
 int add(int a, int b) {
     return a + b;
@@ -16,56 +23,157 @@ int batch_add(int x, int c, int v) {
     return x + c * v;
 }
 
-int main() {
-    int base = 0;
-    int (*add_ptr)(int, int) = add;
-    int (*batch_add_ptr)(int, int, int) = batch_add;
+int max(int a, int b) {
+    return a > b ? a : b;
+}
 
-    vector<int> data = {3, 4, 1, 0, -1, -2, 3, 9};
+int batch_max(int x, int c, int v) {
+    return x > v ? x : v;
+}
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(0, data.size() - 1);
-    std::uniform_int_distribution<> vals(-30, 30);
+int min(int a, int b) {
+    return a < b ? a : b;
+}
 
-    CoarseSegmentTree c = CoarseSegmentTree(data.size(), base, add_ptr, batch_add_ptr);
-    FineSegmentTree f = FineSegmentTree(data.size(), base, add_ptr, batch_add_ptr);
-    LFSegmentTree l = LFSegmentTree(data.size(), base, add_ptr, batch_add_ptr, 2);
+int batch_min(int x, int c, int v) {
+    return x < v ? x : v;
+}
 
-    c.build(data);
-    f.build(data);
-    l.build(data);
+struct thr_params_t {
+    int num_operations;
+    int size;
+    int seed;
+    int prob;
+    int min_range;
+    int max_range;
+    SegmentTree *tree;
+};
 
-    for (int i = 0; i < 30; i++) {
-        std::cout << "Iteration: " << i << std::endl;
+void* workload(void* arg) {
+    thr_params_t params = *reinterpret_cast<thr_params_t*>(arg);
+    SegmentTree* tree = params.tree;
 
-        int n1 = distrib(gen);
-        int n2 = distrib(gen);
-        int lo = std::min(n1, n2);
-        int hi = std::max(n1, n2);
-        int v = vals(gen);
-        c.range_update(lo, hi, v);
-        f.range_update(lo, hi, v);
-        l.range_update(lo, hi, v);
+    std::mt19937 gen(params.seed);
+    std::uniform_int_distribution<> range_dist(params.min_range, params.max_range);
+    std::uniform_int_distribution<> val_dist(-MAX_VAL, MAX_VAL);
+    std::uniform_real_distribution<float> size_dist(0.0f, 1.0f);
+    std::uniform_real_distribution<float> prob_dist(0.0f, 1.0f);
+
+    for (int op = 0; op < params.num_operations; op++) {
+        int range_size = range_dist(gen);
+        int lower = static_cast<int>(size_dist(gen) * (params.size - range_size + 1));
+        int upper = lower + range_size - 1;
         
-        std::cout << "Update: (" << lo << ", " << hi << ") -> " << v << std::endl;
+        if (prob_dist(gen) < params.prob) { 
+            // Range Query
+            tree->range_query(lower, upper);
+        } else {
+            // Range Update
+            tree->range_update(lower, upper, val_dist(gen));
+        }
+    }
+    return nullptr;
+}
 
-        n1 = distrib(gen);
-        n2 = distrib(gen);
-        lo = std::min(n1, n2);
-        hi = std::max(n1, n2);
-        int q1 = c.range_query(lo, hi);
-        int q2 = f.range_query(lo, hi);
-        int q3 = l.range_query(lo, hi);
+int main(int argc, char *argv[]) {
+    string input_filename;
+    char tree_type;
 
-        std::cout << "Query: (" << lo << ", " << hi << ")" << std::endl;
-
-        std::cout << "C: " << q1 << "    F: " << q2 << "    " << "L: " << q3 << std::endl << std::endl;
+    int opt;
+    while ((opt = getopt(argc, argv, "f:t:")) != -1) {
+        switch (opt) {
+            case 'f':
+                input_filename = optarg;
+                break;
+            case 't':
+                tree_type = *optarg;
+                break;
+            default:
+                cerr << "Usage: " << argv[0] << " -f input_filename" << endl;
+                exit(EXIT_FAILURE);
+        }
+    }
+    if (empty(input_filename)) {
+        cerr << "Usage: " << argv[0] << " -f input_filename" << endl;
+        return -1;
     }
 
-    c.print();
-    f.print();
-    l.print();
+    ifstream input_file(input_filename);
+    if (!input_file) {
+        cerr << "Unable to open file: " << input_filename << endl;
+        return -1;
+    }
+
+    int num_threads, num_operations, size, seed;
+    char function_type;
+
+    input_file >> num_threads >> num_operations >> size >> seed;
+    input_file >> function_type;
+
+    int base;
+    AssociativeFunction function;
+    BatchAssociativeFunction batch_function;
+
+    switch (function_type) {
+    default:
+        base = 0;
+        function = add;
+        batch_function = batch_add;
+        break;
+    }
+
+    SegmentTree *tree;
+    
+    if (tree_type == 'C') {
+        tree = new CoarseSegmentTree(size, base, function, batch_function);
+    }
+    else if (tree_type == 'F') {
+        tree = new FineSegmentTree(size, base, function, batch_function);
+    }
+    else {
+        tree = new LFSegmentTree(size, base, function, batch_function, num_threads);
+    }
+
+    vector<thr_params_t> thread_params(num_threads);
+    for (auto& thr_params : thread_params) {
+        thr_params.num_operations = num_operations;
+        thr_params.tree = tree;
+        thr_params.size = size;
+        thr_params.seed = ++seed;
+        input_file >> thr_params.prob >> thr_params.min_range >> thr_params.max_range;
+    }
+   
+    std::mt19937 gen(seed);
+    std::uniform_int_distribution<int> dist(0, 2 * MAX_VAL);
+
+    std::vector<int> data;
+    data.reserve(size);
+    for (int i = 0; i < size; i++) {
+        data.push_back(dist(gen));
+    }
+
+    std::vector<pthread_t> threads(num_threads);
+
+    const auto start = std::chrono::steady_clock::now();
+
+    for (int i = 0; i < num_threads; i++) {
+        if (pthread_create(&threads[i], nullptr, workload, &thread_params[i]) != 0) {
+            return -1;
+        }
+    }
+
+    for (int i = 0; i < num_threads; i++) {
+        if (pthread_join(threads[i], nullptr) != 0) {
+            return -1;
+        }
+    }
+
+    const auto end = std::chrono::steady_clock::now();
+    
+    const double time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
+    std::cout << "Runtime (sec): " << std::fixed << std::setprecision(10) << time << std::endl;
+
+    delete tree;
 
     return 0;
 }

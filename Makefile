@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++20 -O3 -march=native -pedantic -Wall -Wextra -Wunused-variable -Wformat -Wno-unknown-pragmas
+CXXFLAGS = -std=c++20 -O3 -march=native -pthread -pedantic -Wall -Wextra -Wunused-variable -Wformat -Wno-unknown-pragmas
 
 SRC_DIR = src
 INCLUDE_DIR = $(SRC_DIR)

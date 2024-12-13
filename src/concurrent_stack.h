@@ -28,6 +28,7 @@ class ConcurrentStack {
         ConcurrentStack() : head(TaggedNode()) {}
         void push(int data);
         int pop();
+        ~ConcurrentStack();
 };
 
 #endif

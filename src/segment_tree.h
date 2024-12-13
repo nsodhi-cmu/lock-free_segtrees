@@ -48,12 +48,15 @@
     (size) |= (size) >> 16, \
     ++(size))
 
+typedef int (*AssociativeFunction)(int, int);
+typedef int (*BatchAssociativeFunction)(int, int, int);
+
 // Abstract Class
 class SegmentTree {
     protected:
         int base;
-        int (*func)(int, int);
-        int (*batch_func)(int, int, int);
+        AssociativeFunction func;
+        BatchAssociativeFunction batch_func;
     public:
         virtual ~SegmentTree() = default;
         virtual void build(const std::vector<int> &data) = 0;

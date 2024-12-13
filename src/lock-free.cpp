@@ -10,8 +10,6 @@ LFSegmentTree::LFSegmentTree(int size, int base, int (*func)(int, int), int (*ba
     refcount = new std::atomic<int>[num_threads + 1];
 
     for (int i = 0; i < num_threads + 1; i++) {
-        this->nid_ctr = (i + 1) * 100;
-
         shadows[i] = new_node(this->size);
         refcount[i].store(INT_MIN);
         freeList.push(i);
@@ -20,7 +18,6 @@ LFSegmentTree::LFSegmentTree(int size, int base, int (*func)(int, int), int (*ba
 
 LFSegmentTree::Node *LFSegmentTree::new_node(int len) {
     Node *myself = new Node;
-    myself->nid = ++nid_ctr;
     if (len <= 1) {
         myself->left = nullptr;
         myself->right = nullptr;
@@ -40,6 +37,7 @@ LFSegmentTree::~LFSegmentTree() {
         delete_node(shadows[i]);
     }
     delete[] shadows;
+    delete[] refcount;
 }
 
 void LFSegmentTree::delete_node(Node* curr) {
@@ -123,10 +121,6 @@ void LFSegmentTree::range_update(int l, int r, int val) {
             break;
         }
     }
-    //std::cout << "Vector {";
-    //for (const auto& elem : traversal) std::cout << elem << " ";
-    //std::cout << "}" << std::endl;
-
     swap_pointers(l, r, prevNode, 0, size - 1, traversal, vidx);
     refcount[prevHead.index].fetch_add(-1);
     int expected = 0;
@@ -177,18 +171,10 @@ LFSegmentTree::Node *LFSegmentTree::swap_pointers(int l, int r, Node *prev, int 
 
 void LFSegmentTree::print() {
     print(shadows[head.load().index], "", true);
-
-    /*
-    print(shadows[0], "", true);
-    std::cout << "printing 0 done" << std::endl;
-    print(shadows[1], "", true);
-    std::cout << "printing 1 done" << std::endl;
-    */
 }
 
 void LFSegmentTree::print(Node *curr, const std::string &pref, bool last) {
     std::cout << pref << (last ? "└── " : "├── ") << "(" << curr->value << ", " << curr->update << ")" << std::endl;
-    //std::cout << pref << (last ? "└── " : "├── ") << "(nid: " << curr->nid << ")" << std::endl;
     std::string next_pref = pref + (last ? "    " : "│   ");
     if (curr->left != nullptr) {
         print(curr->left, next_pref, false);

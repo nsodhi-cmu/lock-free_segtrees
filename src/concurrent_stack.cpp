@@ -32,3 +32,12 @@ int ConcurrentStack::pop() {
     delete prevHead.node;
     return data;
 }
+
+ConcurrentStack::~ConcurrentStack() {
+    Node *curr = head.load().node;
+    while (curr != nullptr) {
+        Node *temp = curr;
+        curr = curr->next;
+        delete temp;
+    }
+}

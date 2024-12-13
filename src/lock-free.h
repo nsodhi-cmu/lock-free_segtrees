@@ -24,9 +24,7 @@ class LFSegmentTree : public SegmentTree {
         Node *right;
         Node* swap_left;
         Node* swap_right;
-        int nid;
     };
-    int nid_ctr;
 
     int size;
     int num_threads;
