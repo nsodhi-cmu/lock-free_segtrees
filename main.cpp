@@ -40,6 +40,22 @@ int batch_min(int x, int c, int v) {
     return x < v ? x : v;
 }
 
+int mult(int a, int b) {
+    return a * b;
+}
+
+int batch_mult(int x, int c, int v) {
+    int res = 1;
+    while (c > 0) {
+        if (c % 2 == 1) {
+            res *= v;
+        }
+        v *= v;
+        c /= 2;
+    }
+    return x * res;
+}
+
 struct thr_params_t {
     int num_operations;
     int size;
@@ -120,11 +136,31 @@ int main(int argc, char *argv[]) {
     BatchAssociativeFunction batch_function;
 
     switch (function_type) {
-    default:
-        base = 0;
-        function = add;
-        batch_function = batch_add;
-        break;
+        case '+':
+            base = 0;
+            function = add;
+            batch_function = batch_add;
+            break;
+        case '<':
+            base = INT_MAX;
+            function = min;
+            batch_function = batch_min;
+            break;
+        case '>':
+            base = INT_MIN;
+            function = max;
+            batch_function = batch_max;
+            break;
+        case '*':
+            base = 1;
+            function = mult;
+            batch_function = batch_mult;
+            break;
+        default:
+            base = 0;
+            function = add;
+            batch_function = batch_add;
+            break;
     }
 
     SegmentTree *tree;
