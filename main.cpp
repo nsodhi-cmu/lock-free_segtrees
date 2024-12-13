@@ -5,6 +5,7 @@
 #include <chrono>
 #include <iomanip>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "segment_tree.h"
 #include "coarse.h"
@@ -43,7 +44,7 @@ struct thr_params_t {
     int num_operations;
     int size;
     int seed;
-    int prob;
+    float prob;
     int min_range;
     int max_range;
     SegmentTree *tree;
@@ -53,18 +54,18 @@ void* workload(void* arg) {
     thr_params_t params = *reinterpret_cast<thr_params_t*>(arg);
     SegmentTree* tree = params.tree;
 
-    std::mt19937 gen(params.seed);
-    std::uniform_int_distribution<> range_dist(params.min_range, params.max_range);
-    std::uniform_int_distribution<> val_dist(-MAX_VAL, MAX_VAL);
-    std::uniform_real_distribution<float> size_dist(0.0f, 1.0f);
-    std::uniform_real_distribution<float> prob_dist(0.0f, 1.0f);
+    mt19937 gen(params.seed);
+    uniform_int_distribution range_dist(params.min_range, params.max_range);
+    uniform_int_distribution val_dist(-MAX_VAL, MAX_VAL);
+    uniform_real_distribution size_dist(0.0f, 1.0f);
+    uniform_real_distribution prob_dist(0.0f, 1.0f);
 
     for (int op = 0; op < params.num_operations; op++) {
         int range_size = range_dist(gen);
         int lower = static_cast<int>(size_dist(gen) * (params.size - range_size + 1));
         int upper = lower + range_size - 1;
         
-        if (prob_dist(gen) < params.prob) { 
+        if (prob_dist(gen) < params.prob) {
             // Range Query
             tree->range_query(lower, upper);
         } else {
@@ -90,7 +91,7 @@ int main(int argc, char *argv[]) {
                 break;
             default:
                 cerr << "Usage: " << argv[0] << " -f input_filename" << endl;
-                exit(EXIT_FAILURE);
+                return -1;
         }
     }
     if (empty(input_filename)) {
@@ -143,18 +144,20 @@ int main(int argc, char *argv[]) {
         input_file >> thr_params.prob >> thr_params.min_range >> thr_params.max_range;
     }
    
-    std::mt19937 gen(seed);
-    std::uniform_int_distribution<int> dist(0, 2 * MAX_VAL);
+    mt19937 gen(seed);
+    uniform_int_distribution<int> dist(0, 2 * MAX_VAL);
 
-    std::vector<int> data;
+    vector<int> data;
     data.reserve(size);
     for (int i = 0; i < size; i++) {
         data.push_back(dist(gen));
     }
 
-    std::vector<pthread_t> threads(num_threads);
+    tree->build(data);
 
-    const auto start = std::chrono::steady_clock::now();
+    vector<pthread_t> threads(num_threads);
+
+    const auto start = chrono::steady_clock::now();
 
     for (int i = 0; i < num_threads; i++) {
         if (pthread_create(&threads[i], nullptr, workload, &thread_params[i]) != 0) {
@@ -168,12 +171,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    const auto end = std::chrono::steady_clock::now();
+    const auto end = chrono::steady_clock::now();
     
-    const double time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count();
-    std::cout << "Runtime (sec): " << std::fixed << std::setprecision(10) << time << std::endl;
+    const double time = chrono::duration_cast<chrono::duration<double>>(end - start).count();
+    cout << "Runtime (sec): " << fixed << setprecision(10) << time << endl;
 
-    delete tree;
+    // delete tree;
 
     return 0;
 }
