@@ -14,7 +14,7 @@ TARGET = segtree_main
 all: $(TARGET)
 
 $(TARGET): $(SRCS) $(MAIN_SRC) $(HEADERS)
-	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -o $@ $(SRCS) $(MAIN_SRC)
+	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -o $@ $(SRCS) $(MAIN_SRC) -latomic
 
 clean:
 	rm -f $(TARGET)

@@ -95,7 +95,7 @@ void* workload(void* arg) {
 int main(int argc, char *argv[]) {
     string input_filename;
     char tree_type;
-    int num_threads;
+    int num_threads = 0;
 
     int opt;
     while ((opt = getopt(argc, argv, "f:t:n:")) != -1) {
@@ -130,6 +130,8 @@ int main(int argc, char *argv[]) {
 
     input_file >> _num_threads >> num_operations >> size >> seed;
     input_file >> function_type;
+
+    if (num_threads == 0) num_threads = _num_threads;
 
     int base;
     AssociativeFunction function;
@@ -196,6 +198,8 @@ int main(int argc, char *argv[]) {
     tree->build(data);
 
     vector<pthread_t> threads(num_threads);
+
+    printf("Number of Threads: %d\n", num_threads);
 
     const auto start = chrono::steady_clock::now();
 
