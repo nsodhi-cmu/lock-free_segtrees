@@ -38,16 +38,16 @@ void FineSegmentTree::build(const std::vector<int> &data, int i, int lo, int hi)
 }
 
 int FineSegmentTree::range_query(int l, int r) {
-    std::queue<std::tuple<int, int, int>> q;
+    std::queue<QueueObj> q;
     int result = base;
     pthread_mutex_lock(&this->tree[1].mux);
-    q.push({1, 0, size - 1});
+    q.push(QueueObj(1, 0, size - 1));
     while (!q.empty()) {
-        std::tuple<int, int, int> curr = q.front();
+        QueueObj curr = q.front();
         q.pop();
-        int i = std::get<0>(curr);
-        int lo = std::get<1>(curr);
-        int hi = std::get<2>(curr);
+        int i = curr.i;
+        int lo = curr.lo;
+        int hi = curr.hi;
         int size = hi - lo + 1;
         if (SEG_CONTAINS(l, r, lo, hi)) {
             if (size > 1) {
@@ -58,7 +58,7 @@ int FineSegmentTree::range_query(int l, int r) {
                 result = func(result, tree[i].value);
                 tree[i].update = base;
             }
-        } else if (!(SEG_DISJOINT(l, r, lo, hi))){
+        } else if (!(SEG_DISJOINT(l, r, lo, hi))) {
             tree[i].value = batch_func(tree[i].value, size, tree[i].update);
             pthread_mutex_lock(&this->tree[L_INDEX(i)].mux);
             pthread_mutex_lock(&this->tree[R_INDEX(i)].mux);
@@ -66,8 +66,8 @@ int FineSegmentTree::range_query(int l, int r) {
             tree[R_INDEX(i)].update = func(tree[R_INDEX(i)].update, tree[i].update);
             tree[i].update = base;
             int mid = SEG_MIDPOINT(lo, hi);
-            q.push({L_INDEX(i), lo, mid});
-            q.push({R_INDEX(i), mid + 1, hi});
+            q.push(QueueObj(L_INDEX(i), lo, mid));
+            q.push(QueueObj(R_INDEX(i), mid + 1, hi));
         }
         pthread_mutex_unlock(&this->tree[i].mux);
     }
@@ -75,15 +75,16 @@ int FineSegmentTree::range_query(int l, int r) {
 }
 
 void FineSegmentTree::range_update(int l, int r, int val) {
-    std::queue<std::tuple<int, int, int>> q;
+    std::queue<QueueObj> q;
     pthread_mutex_lock(&this->tree[1].mux);
-    q.push({1, 0, size - 1});
+    q.push(QueueObj(1, 0, size - 1));
     while (!q.empty()) {
-        std::tuple<int, int, int> curr = q.front();
+        QueueObj curr = q.front();
         q.pop();
-        int i = std::get<0>(curr);
-        int lo = std::get<1>(curr);
-        int hi = std::get<2>(curr);
+        int i = curr.i;
+        int lo = curr.lo;
+        int hi = curr.hi;
+        int size = hi - lo + 1;
         if (SEG_CONTAINS(l, r, lo, hi)) {
             tree[i].update = func(tree[i].update, val);
         } else if (!(SEG_DISJOINT(l, r, lo, hi))){
@@ -92,8 +93,8 @@ void FineSegmentTree::range_update(int l, int r, int val) {
             pthread_mutex_lock(&this->tree[L_INDEX(i)].mux);
             pthread_mutex_lock(&this->tree[R_INDEX(i)].mux);
             int mid = SEG_MIDPOINT(lo, hi);
-            q.push({L_INDEX(i), lo, mid});
-            q.push({R_INDEX(i), mid + 1, hi});
+            q.push(QueueObj(L_INDEX(i), lo, mid));
+            q.push(QueueObj(R_INDEX(i), mid + 1, hi));
         }
         pthread_mutex_unlock(&this->tree[i].mux);
     }

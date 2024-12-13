@@ -4,7 +4,6 @@
 #include <iostream>
 #include <string>
 #include <queue>
-#include <tuple>
 #include <vector>
 #include <pthread.h>
 
@@ -15,6 +14,14 @@ class FineSegmentTree : public SegmentTree {
         pthread_mutex_t mux;
         int value;
         int update;
+    };
+
+    struct QueueObj {
+        int i;
+        int lo;
+        int hi;
+        QueueObj() : i(-1), lo(-1), hi(-1) {}
+        QueueObj(int i_, int lo_, int hi_) : i(i_), lo(lo_), hi(hi_) {}
     };
 
     int size;
