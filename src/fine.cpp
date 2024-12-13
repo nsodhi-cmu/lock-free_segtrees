@@ -6,9 +6,15 @@ FineSegmentTree::FineSegmentTree(int size, int base, int (*func)(int, int), int 
     this->base = base;
     this->func = func;
     this->batch_func = batch_func;
+    for (int i = 1; i < this->size; i++) {
+        pthread_mutex_init(&this->tree[i].mux, nullptr);
+    }
 }
 
 FineSegmentTree::~FineSegmentTree() {
+    for (int i = 1; i < this->size; i++) {
+        pthread_mutex_destroy(&this->tree[i].mux);
+    }
     delete[] tree;
 }
 
@@ -34,7 +40,7 @@ void FineSegmentTree::build(const std::vector<int> &data, int i, int lo, int hi)
 int FineSegmentTree::range_query(int l, int r) {
     std::queue<std::tuple<int, int, int>> q;
     int result = base;
-    tree[1].mux.lock();
+    pthread_mutex_lock(&this->tree[1].mux);
     q.push({1, 0, size - 1});
     while (!q.empty()) {
         std::tuple<int, int, int> curr = q.front();
@@ -54,8 +60,8 @@ int FineSegmentTree::range_query(int l, int r) {
             }
         } else if (!(SEG_DISJOINT(l, r, lo, hi))){
             tree[i].value = batch_func(tree[i].value, size, tree[i].update);
-            tree[L_INDEX(i)].mux.lock();
-            tree[R_INDEX(i)].mux.lock();
+            pthread_mutex_lock(&this->tree[L_INDEX(i)].mux);
+            pthread_mutex_lock(&this->tree[R_INDEX(i)].mux);
             tree[L_INDEX(i)].update = func(tree[L_INDEX(i)].update, tree[i].update);
             tree[R_INDEX(i)].update = func(tree[R_INDEX(i)].update, tree[i].update);
             tree[i].update = base;
@@ -63,14 +69,14 @@ int FineSegmentTree::range_query(int l, int r) {
             q.push({L_INDEX(i), lo, mid});
             q.push({R_INDEX(i), mid + 1, hi});
         }
-        tree[i].mux.unlock();
+        pthread_mutex_unlock(&this->tree[i].mux);
     }
     return result;
 }
 
 void FineSegmentTree::range_update(int l, int r, int val) {
     std::queue<std::tuple<int, int, int>> q;
-    tree[1].mux.lock();
+    pthread_mutex_lock(&this->tree[1].mux);
     q.push({1, 0, size - 1});
     while (!q.empty()) {
         std::tuple<int, int, int> curr = q.front();
@@ -83,13 +89,13 @@ void FineSegmentTree::range_update(int l, int r, int val) {
         } else if (!(SEG_DISJOINT(l, r, lo, hi))){
             int intersection = std::min(r, hi) - std::max(l, lo) + 1;
             tree[i].value = batch_func(tree[i].value, intersection, val);
-            tree[L_INDEX(i)].mux.lock();
-            tree[R_INDEX(i)].mux.lock();
+            pthread_mutex_lock(&this->tree[L_INDEX(i)].mux);
+            pthread_mutex_lock(&this->tree[R_INDEX(i)].mux);
             int mid = SEG_MIDPOINT(lo, hi);
             q.push({L_INDEX(i), lo, mid});
             q.push({R_INDEX(i), mid + 1, hi});
         }
-        tree[i].mux.unlock();
+        pthread_mutex_unlock(&this->tree[i].mux);
     }
 }
 

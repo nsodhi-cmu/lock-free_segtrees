@@ -6,13 +6,13 @@
 #include <queue>
 #include <tuple>
 #include <vector>
-#include <mutex>
+#include <pthread.h>
 
 #include "segment_tree.h"
 
 class FineSegmentTree : public SegmentTree {
     struct Node {
-        std::mutex mux;
+        pthread_mutex_t mux;
         int value;
         int update;
     };

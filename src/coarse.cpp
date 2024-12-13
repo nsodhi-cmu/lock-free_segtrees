@@ -7,16 +7,18 @@ CoarseSegmentTree::CoarseSegmentTree(int size, int base, int (*func)(int, int), 
     this->base = base;
     this->func = func;
     this->batch_func = batch_func;
+    pthread_mutex_init(&this->mux, nullptr);
 }
 
 CoarseSegmentTree::~CoarseSegmentTree() {
+    pthread_mutex_destroy(&this->mux);
     delete[] tree;
 }
 
 void CoarseSegmentTree::build(const std::vector<int> &data) {
-    mux.lock();
+    pthread_mutex_lock(&this->mux);
     build(data, 1, 0, size - 1);
-    mux.unlock();
+    pthread_mutex_unlock(&this->mux);
 }
 
 void CoarseSegmentTree::build(const std::vector<int> &data, int i, int lo, int hi) {
@@ -35,9 +37,9 @@ void CoarseSegmentTree::build(const std::vector<int> &data, int i, int lo, int h
 }
 
 int CoarseSegmentTree::range_query(int l, int r) {
-    mux.lock();
+    pthread_mutex_lock(&this->mux);
     int result = range_query(l, r, 1, 0, size - 1);
-    mux.unlock();
+    pthread_mutex_unlock(&this->mux);
     return result;
 }
 
@@ -58,9 +60,9 @@ int CoarseSegmentTree::range_query(int l, int r, int i, int lo, int hi) {
 }
 
 void CoarseSegmentTree::range_update(int l, int r, int val) {
-    mux.lock();
+    pthread_mutex_lock(&this->mux);
     range_update(l, r, val, 1, 0, size - 1);
-    mux.unlock();
+    pthread_mutex_unlock(&this->mux);
 }
 
 void CoarseSegmentTree::range_update(int l, int r, int val, int i, int lo, int hi) {
@@ -77,9 +79,9 @@ void CoarseSegmentTree::range_update(int l, int r, int val, int i, int lo, int h
 }
 
 void CoarseSegmentTree::print() {
-    mux.lock();
+    pthread_mutex_lock(&this->mux);
     print(1, "", true);
-    mux.unlock();
+    pthread_mutex_unlock(&this->mux);
 }
 
 void CoarseSegmentTree::print(int i, const std::string &pref, bool last) {

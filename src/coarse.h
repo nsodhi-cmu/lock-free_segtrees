@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <mutex>
+#include <pthread.h>
 
 #include "segment_tree.h"
 
@@ -14,7 +14,7 @@ class CoarseSegmentTree : public SegmentTree {
         int update;
     };
 
-    std::mutex mux;
+    pthread_mutex_t mux;
     int size;
     Node *tree;
     
