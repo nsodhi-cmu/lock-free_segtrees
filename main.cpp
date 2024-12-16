@@ -11,6 +11,7 @@
 #include "coarse.h"
 #include "fine.h"
 #include "lock-free.h"
+#include "pointer.h"
 
 using namespace std;
 
@@ -57,6 +58,7 @@ int batch_mult(int x, int c, int v) {
 }
 
 struct thr_params_t {
+    int idx;
     int num_operations;
     int size;
     int seed;
@@ -76,6 +78,8 @@ void* workload(void* arg) {
     uniform_real_distribution size_dist(0.0f, 1.0f);
     uniform_real_distribution prob_dist(0.0f, 1.0f);
 
+    const auto start = chrono::steady_clock::now();
+
     for (int op = 0; op < params.num_operations; op++) {
         int range_size = range_dist(gen);
         int lower = static_cast<int>(size_dist(gen) * (params.size - range_size + 1));
@@ -89,71 +93,104 @@ void* workload(void* arg) {
             tree->range_update(lower, upper, val_dist(gen));
         }
     }
+
+    const auto end = chrono::steady_clock::now();
+
+    const double time = chrono::duration_cast<chrono::duration<double>>(end - start).count();
+    cout << "Thread #" << params.idx << " Runtime (sec): " << fixed << setprecision(10) << time << endl;
     return nullptr;
 }
 
+void decode_function_type(char function_type, char& base, AssociativeFunction& function, BatchAssociativeFunction& batch_function) {
+    switch (function_type) {
+        case 'a':
+            base = 0;
+            function = add;
+            batch_function = batch_add;
+            break;
+        case 'l':
+            base = INT_MAX;
+            function = min;
+            batch_function = batch_min;
+            break;
+        case 'g':
+            base = INT_MIN;
+            function = max;
+            batch_function = batch_max;
+            break;
+        case 'm':
+            base = 1;
+            function = mult;
+            batch_function = batch_mult;
+            break;
+        default:
+            base = 0;
+            function = add;
+            batch_function = batch_add;
+            break;
+    }
+}
+
 int main(int argc, char *argv[]) {
-    string input_filename;
-    char tree_type;
-    int num_threads = 0;
+    char mode = 0, tree_type = 0, function_type = 0;
+    int num_threads = 0, num_operations = 0, size = 0, seed = 42;
+    float prob = 0.0f;
 
     int opt;
-    while ((opt = getopt(argc, argv, "f:t:n:")) != -1) {
+    while ((opt = getopt(argc, argv, "m:t:f:p:r:n:i:")) != -1) {
         switch (opt) {
-            case 'f':
-                input_filename = optarg;
+            case 'm':
+                mode = *optarg;
                 break;
             case 't':
                 tree_type = *optarg;
                 break;
-            case 'n':
+            case 'f':
+                function_type = *optarg;
+                break;
+            case 'p':
                 num_threads = atoi(optarg);
                 break;
+            case 'r':
+                prob = atof(optarg);
+                break;
+            case 'n':
+                size = atoi(optarg);
+                break;
+            case 'i':
+                num_operations = atoi(optarg);
+                break;
             default:
-                cerr << "Usage: " << argv[0] << " -f input_filename -t tree_type [-n num_threads]" << endl;
+                cerr << "Usage: " << argv[0] << " -m mode -t tree_type -f associative_function -p num_threads -r read_prob -n data_size -i operations [-s seed]" << endl;
                 return -1;
         }
     }
-    if (empty(input_filename)) {
-        cerr << "Usage: " << argv[0] << " -f input_filename" << endl;
+    if (!mode || !num_threads || !tree_type || !function_type || !size || !num_operations || prob == 0.0f) {
+        cerr << "Usage: " << argv[0] << " -m mode -t tree_type -f associative_function -p num_threads -r read_prob -n data_size -i operations [-s seed]" << endl;
         return -1;
     }
-
-    ifstream input_file(input_filename);
-    if (!input_file) {
-        cerr << "Unable to open file: " << input_filename << endl;
-        return -1;
-    }
-
-    int _num_threads, num_operations, size, seed;
-    char function_type;
-
-    input_file >> _num_threads >> num_operations >> size >> seed;
-    input_file >> function_type;
-
-    if (num_threads == 0) num_threads = _num_threads;
 
     int base;
     AssociativeFunction function;
     BatchAssociativeFunction batch_function;
 
     switch (function_type) {
-        case '+':
+        case 'a':
             base = 0;
             function = add;
             batch_function = batch_add;
             break;
-        case '<':
+        case 'l':
             base = INT_MAX;
             function = min;
             batch_function = batch_min;
             break;
-        case '>':
+        case 'g':
             base = INT_MIN;
             function = max;
             batch_function = batch_max;
             break;
-        case '*':
+        case 'm':
             base = 1;
             function = mult;
             batch_function = batch_mult;
@@ -173,35 +210,41 @@ int main(int argc, char *argv[]) {
     else if (tree_type == 'F') {
         tree = new FineSegmentTree(size, base, function, batch_function);
     }
+    else if (tree_type == 'P') {
+        tree = new PointerSegmentTree(size, base, function, batch_function);
+    }
     else {
         tree = new LFSegmentTree(size, base, function, batch_function, num_threads);
     }
 
+    int num_operations_per_thread = (mode == 'D') ? (num_operations / num_threads) : num_operations;
+
+    printf("Mode: %c\n", mode);
+    printf("Tree Type: %c\n", tree_type);
+    printf("Associative Function: %c\n", function_type);
+    printf("Number of threads: %d\n", num_threads);
+    printf("Number of operations: %d Total, %d Per Thread\n", num_operations, num_operations_per_thread);
+    printf("Size: %d\n", size);
+    printf("Seed: %d\n", seed);
+    printf("Read Probability: %f\n", prob);
+
     vector<thr_params_t> thread_params(num_threads);
-    for (auto& thr_params : thread_params) {
-        thr_params.num_operations = num_operations;
+    for (int i = 0; i < num_threads; i++) {
+        thr_params_t &thr_params = thread_params[i];
+        thr_params.idx = i;
+        thr_params.num_operations = num_operations_per_thread;
         thr_params.tree = tree;
         thr_params.size = size;
         thr_params.seed = ++seed;
-        input_file >> thr_params.prob >> thr_params.min_range >> thr_params.max_range;
-    }
-   
-    mt19937 gen(seed);
-    uniform_int_distribution<int> dist(0, 2 * MAX_VAL);
-
-    vector<int> data;
-    data.reserve(size);
-    for (int i = 0; i < size; i++) {
-        data.push_back(dist(gen));
+        thr_params.prob = prob;
+        thr_params.min_range = 0;
+        thr_params.max_range = size;
     }
 
+    vector data(size, 0);
     tree->build(data);
 
     vector<pthread_t> threads(num_threads);
-
-    printf("Number of Threads: %d\n", num_threads);
-
-    const auto start = chrono::steady_clock::now();
 
     for (int i = 0; i < num_threads; i++) {
         if (pthread_create(&threads[i], nullptr, workload, &thread_params[i]) != 0) {
@@ -214,13 +257,5 @@ int main(int argc, char *argv[]) {
             return -1;
         }
     }
-
-    const auto end = chrono::steady_clock::now();
-    
-    const double time = chrono::duration_cast<chrono::duration<double>>(end - start).count();
-    cout << "Runtime (sec): " << fixed << setprecision(10) << time << endl;
-
-    // delete tree;
-
     return 0;
 }

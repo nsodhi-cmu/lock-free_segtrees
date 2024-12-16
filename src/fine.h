@@ -29,11 +29,11 @@ class FineSegmentTree : public SegmentTree {
     
     public:
         explicit FineSegmentTree(int size, int base, int (*func)(int, int), int (*batch_func)(int, int, int));
-        ~FineSegmentTree();
-        void build(const std::vector<int> &data); // Not thread safe!
-        int range_query(int lower, int upper);
-        void range_update(int lower, int upper, int value);
-        void print(); // Not thread safe!
+        ~FineSegmentTree() override;
+        void build(const std::vector<int> &data) override; // Not thread safe!
+        int range_query(int lower, int upper) override;
+        void range_update(int lower, int upper, int value) override;
+        void print() override; // Not thread safe!
     
     private:
         void build(const std::vector<int> &data, int i, int lo, int hi);

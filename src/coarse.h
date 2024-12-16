@@ -20,11 +20,11 @@ class CoarseSegmentTree : public SegmentTree {
     
     public:
         explicit CoarseSegmentTree(int size, int base, int (*func)(int, int), int (*batch_func)(int, int, int));
-        ~CoarseSegmentTree();
-        void build(const std::vector<int> &data);
-        int range_query(int lower, int upper);
-        void range_update(int lower, int upper, int value);
-        void print();
+        ~CoarseSegmentTree() override;
+        void build(const std::vector<int> &data) override;
+        int range_query(int lower, int upper) override;
+        void range_update(int lower, int upper, int value) override;
+        void print() override;
     
     private:
         void build(const std::vector<int> &data, int i, int lo, int hi);
